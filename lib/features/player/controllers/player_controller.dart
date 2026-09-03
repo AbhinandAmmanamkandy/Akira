@@ -1,13 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../data/models/episode.dart';
+import '../../../data/models/watch_history_item.dart';
 import '../../../data/repositories/anime_repository.dart';
+import '../../../data/repositories/watch_history_repository.dart';
 
 class PlayerController extends ChangeNotifier {
   final AnimeRepository _repository;
+  final WatchHistoryRepository _historyRepository;
+
   final int animeId;
+  final String animeTitle;
+  final String? animePoster;
   final List<Episode> allEpisodes;
 
   Episode currentEpisode;
@@ -15,6 +22,7 @@ class PlayerController extends ChangeNotifier {
   EpisodeServer? selectedServer;
 
   VideoPlayerController? videoPlayerController;
+  Timer? _historySaveTimer;
 
   bool isLoadingServers = true;
   bool isLoadingStream = true;
@@ -25,11 +33,15 @@ class PlayerController extends ChangeNotifier {
 
   PlayerController({
     required this.animeId,
+    required this.animeTitle,
+    this.animePoster,
     required Episode initialEpisode,
     required this.allEpisodes,
     AnimeRepository? repository,
+    WatchHistoryRepository? historyRepository,
   })  : currentEpisode = initialEpisode,
-        _repository = repository ?? AnimeRepository();
+        _repository = repository ?? AnimeRepository(),
+        _historyRepository = historyRepository ?? WatchHistoryRepository();
 
   void init() {
     loadEpisodeServers();
@@ -39,7 +51,40 @@ class PlayerController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _startHistoryTimer() {
+    _historySaveTimer?.cancel();
+    _historySaveTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _saveCurrentWatchProgress();
+    });
+  }
+
+  Future<void> _saveCurrentWatchProgress() async {
+    final vp = videoPlayerController;
+    if (vp == null || !vp.value.isInitialized) return;
+
+    final pos = vp.value.position.inSeconds;
+    final dur = vp.value.duration.inSeconds;
+
+    if (dur > 0 && pos > 2) {
+      final item = WatchHistoryItem(
+        animeId: animeId,
+        animeTitle: animeTitle,
+        animePoster: animePoster,
+        episodeId: currentEpisode.id,
+        episodeName: currentEpisode.name,
+        episodeNumber: currentEpisode.number,
+        positionInSeconds: pos,
+        durationInSeconds: dur,
+        lastUpdated: DateTime.now(),
+      );
+      await _historyRepository.saveProgress(item);
+    }
+  }
+
   void disposeVideoController() {
+    _saveCurrentWatchProgress();
+    _historySaveTimer?.cancel();
+    _historySaveTimer = null;
     videoPlayerController?.removeListener(_videoListener);
     videoPlayerController?.dispose();
     videoPlayerController = null;
@@ -119,7 +164,17 @@ class PlayerController extends ChangeNotifier {
       videoPlayerController = controller;
       await controller.initialize();
       controller.addListener(_videoListener);
+
+      // Check saved progress & seek if resuming
+      final history = await _historyRepository.getHistoryForEpisode(currentEpisode.id);
+      if (history != null &&
+          history.positionInSeconds > 5 &&
+          history.positionInSeconds < history.durationInSeconds - 10) {
+        await controller.seekTo(Duration(seconds: history.positionInSeconds));
+      }
+
       controller.play();
+      _startHistoryTimer();
 
       isLoadingStream = false;
       notifyListeners();

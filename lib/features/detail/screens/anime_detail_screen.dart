@@ -264,6 +264,7 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                                 builder: (_) => PlayerScreen(
                                   animeId: widget.animeId,
                                   animeTitle: title,
+                                  animePoster: poster,
                                   selectedEpisode: ep,
                                   allEpisodes: _controller.episodes,
                                 ),

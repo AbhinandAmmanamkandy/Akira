@@ -8,6 +8,7 @@ import '../../../core/widgets/section_header.dart';
 import '../../../data/models/anime_post.dart';
 import '../../detail/screens/anime_detail_screen.dart';
 import '../controllers/home_controller.dart';
+import '../widgets/continue_watching_carousel.dart';
 import '../widgets/featured_hero.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -98,6 +99,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       FeaturedHero(featured: homeData.featured!),
                       const SizedBox(height: 24),
                     ],
+                    if (_controller.watchHistory.isNotEmpty) ...[
+                      ContinueWatchingCarousel(
+                        items: _controller.watchHistory,
+                        onHistoryUpdated: () => _controller.refreshWatchHistory(),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     for (var section in homeData.sections) ...[
                       if (section.posts.isNotEmpty) ...[
                         SectionHeader(title: section.name),
@@ -129,8 +137,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: AnimeCard(
               post: post,
               width: 130,
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => AnimeDetailScreen(
@@ -140,6 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 );
+                _controller.refreshWatchHistory();
               },
             ),
           );

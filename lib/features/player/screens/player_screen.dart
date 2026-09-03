@@ -8,6 +8,7 @@ import '../controllers/player_controller.dart';
 class PlayerScreen extends StatefulWidget {
   final int animeId;
   final String animeTitle;
+  final String? animePoster;
   final Episode selectedEpisode;
   final List<Episode> allEpisodes;
 
@@ -15,6 +16,7 @@ class PlayerScreen extends StatefulWidget {
     super.key,
     required this.animeId,
     required this.animeTitle,
+    this.animePoster,
     required this.selectedEpisode,
     required this.allEpisodes,
   });
@@ -31,6 +33,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     super.initState();
     _controller = PlayerController(
       animeId: widget.animeId,
+      animeTitle: widget.animeTitle,
+      animePoster: widget.animePoster,
       initialEpisode: widget.selectedEpisode,
       allEpisodes: widget.allEpisodes,
     );
