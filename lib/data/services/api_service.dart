@@ -1,21 +1,18 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/anime.dart';
+import '../../core/constants/api_constants.dart';
+import '../models/anime_detail.dart';
+import '../models/anime_post.dart';
+import '../models/category.dart';
+import '../models/episode.dart';
+import '../models/home_data.dart';
 
 class ApiService {
-  static const String _anilabBaseUrl = 'https://anilab2.amdapi.click/api';
-  static const String _anidbBaseUrl = 'https://play.anidb.app/api';
-
-  static const Map<String, String> _headers = {
-    'Accept': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  };
-
   /// Fetch Home page sections and featured anime
   Future<HomeData> getHome() async {
     final response = await http.get(
-      Uri.parse('$_anilabBaseUrl/home'),
-      headers: _headers,
+      Uri.parse('${ApiConstants.anilabBaseUrl}/home'),
+      headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -28,8 +25,8 @@ class ApiService {
   /// Fetch Latest anime releases
   Future<List<AnimePost>> getLatest({int page = 1}) async {
     final response = await http.get(
-      Uri.parse('$_anilabBaseUrl/latest?page=$page'),
-      headers: _headers,
+      Uri.parse('${ApiConstants.anilabBaseUrl}/latest?page=$page'),
+      headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -43,8 +40,8 @@ class ApiService {
   /// Fetch list of genres / categories
   Future<List<Category>> getCategories() async {
     final response = await http.get(
-      Uri.parse('$_anilabBaseUrl/categories'),
-      headers: _headers,
+      Uri.parse('${ApiConstants.anilabBaseUrl}/categories'),
+      headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -60,8 +57,8 @@ class ApiService {
     if (query.trim().isEmpty) return [];
     final encodedQuery = Uri.encodeComponent(query.trim());
     final response = await http.get(
-      Uri.parse('$_anilabBaseUrl/search?query=$encodedQuery&page=$page'),
-      headers: _headers,
+      Uri.parse('${ApiConstants.anilabBaseUrl}/search?query=$encodedQuery&page=$page'),
+      headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -75,8 +72,8 @@ class ApiService {
   /// Fetch full metadata details for a specific anime
   Future<AnimeDetail> getAnimeDetail(int id) async {
     final response = await http.get(
-      Uri.parse('$_anilabBaseUrl/post?id=$id'),
-      headers: _headers,
+      Uri.parse('${ApiConstants.anilabBaseUrl}/post?id=$id'),
+      headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -89,8 +86,8 @@ class ApiService {
   /// Fetch episodes list for an anime ID
   Future<List<Episode>> getEpisodes(int animeId) async {
     final response = await http.get(
-      Uri.parse('$_anidbBaseUrl/anime/$animeId/episodes'),
-      headers: _headers,
+      Uri.parse('${ApiConstants.anidbBaseUrl}/anime/$animeId/episodes'),
+      headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -104,8 +101,8 @@ class ApiService {
   /// Fetch streaming servers for a given episode ID
   Future<List<EpisodeServer>> getEpisodeServers(String episodeId) async {
     final response = await http.get(
-      Uri.parse('$_anidbBaseUrl/episode/$episodeId/servers'),
-      headers: _headers,
+      Uri.parse('${ApiConstants.anidbBaseUrl}/episode/$episodeId/servers'),
+      headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -116,11 +113,11 @@ class ApiService {
     }
   }
 
-  /// Get video iframe stream URL for a given server ID (e.g. "70895/jpn")
+  /// Get video iframe stream URL for a given server ID
   Future<String> getIframeUrl(String serverId) async {
     final response = await http.get(
-      Uri.parse('$_anidbBaseUrl/episode/$serverId/iframe'),
-      headers: _headers,
+      Uri.parse('${ApiConstants.anidbBaseUrl}/episode/$serverId/iframe'),
+      headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -139,12 +136,10 @@ class ApiService {
     try {
       final response = await http.get(
         Uri.parse(iframeUrl),
-        headers: _headers,
+        headers: ApiConstants.headers,
       );
       if (response.statusCode == 200) {
         final html = response.body;
-
-        // Search for m3u8 or mp4 URL in HTML/JS source
         final RegExp m3u8Regex = RegExp(
           r'https?://[^\s"' "'" r'<>]+\.(?:m3u8|mp4)[^\s"' "'" r'<>]*',
           caseSensitive: false,
@@ -154,9 +149,7 @@ class ApiService {
           return match.group(0);
         }
       }
-    } catch (e) {
-      // Fallback
-    }
+    } catch (_) {}
     return null;
   }
 }
