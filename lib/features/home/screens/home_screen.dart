@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/anime_card.dart';
 import '../../../core/widgets/error_view.dart';
@@ -53,6 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               case HomeState.success:
                 final homeData = _controller.homeData!;
+                final postsToDisplay = _controller.latestPosts.isNotEmpty
+                    ? _controller.latestPosts
+                    : (homeData.sections.isNotEmpty
+                        ? homeData.sections.first.posts
+                        : <AnimePost>[]);
+
                 return RefreshIndicator(
                   color: AppColors.primaryColor,
                   onRefresh: () => _controller.loadHomeData(),
@@ -70,13 +75,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 24),
                       ],
-                      for (var section in homeData.sections) ...[
-                        if (section.posts.isNotEmpty) ...[
-                          SectionHeader(title: section.name),
-                          const SizedBox(height: 12),
-                          _buildHorizontalPostList(context, section.posts),
-                          const SizedBox(height: 24),
-                        ],
+                      if (postsToDisplay.isNotEmpty) ...[
+                        const SectionHeader(title: 'Recently Updated'),
+                        const SizedBox(height: 12),
+                        _buildGridPostList(context, postsToDisplay),
+                        const SizedBox(height: 24),
                       ],
                     ],
                   ),
@@ -88,34 +91,37 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHorizontalPostList(BuildContext context, List<AnimePost> posts) {
-    return SizedBox(
-      height: 210,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+  Widget _buildGridPostList(BuildContext context, List<AnimePost> posts) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         itemCount: posts.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.65,
+        ),
         itemBuilder: (context, index) {
           final post = posts[index];
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: AnimeCard(
-              post: post,
-              width: 130,
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AnimeDetailScreen(
-                      animeId: post.id,
-                      initialTitle: post.title,
-                      initialPoster: post.poster,
-                    ),
+          return AnimeCard(
+            post: post,
+            width: double.infinity,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AnimeDetailScreen(
+                    animeId: post.id,
+                    initialTitle: post.title,
+                    initialPoster: post.poster,
                   ),
-                );
-                _controller.refreshWatchHistory();
-              },
-            ),
+                ),
+              );
+              _controller.refreshWatchHistory();
+            },
           );
         },
       ),

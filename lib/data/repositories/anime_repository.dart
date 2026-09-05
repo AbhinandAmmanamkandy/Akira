@@ -11,6 +11,10 @@ class AnimeRepository {
   AnimeRepository({ApiService? apiService})
       : _apiService = apiService ?? ApiService();
 
+  Future<HomeData?> getCachedHome() => _apiService.getCachedHome();
+
+  Future<List<AnimePost>> getCachedLatest() => _apiService.getCachedLatest();
+
   Future<HomeData> fetchHome() => _apiService.getHome();
 
   Future<List<AnimePost>> fetchLatest({int page = 1}) =>

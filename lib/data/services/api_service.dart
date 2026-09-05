@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/api_constants.dart';
 import '../models/anime_detail.dart';
 import '../models/anime_post.dart';
@@ -8,13 +9,46 @@ import '../models/episode.dart';
 import '../models/home_data.dart';
 
 class ApiService {
+  static final http.Client _client = http.Client();
+  static const String _cachedHomeKey = 'akira_cached_home_data';
+  static const String _cachedLatestKey = 'akira_cached_latest_data';
+
+  /// Fetch cached Home page data locally for instant render
+  Future<HomeData?> getCachedHome() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawJson = prefs.getString(_cachedHomeKey);
+      if (rawJson != null && rawJson.isNotEmpty) {
+        final Map<String, dynamic> data = json.decode(rawJson);
+        return HomeData.fromJson(data);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Fetch cached Latest anime posts locally for instant render
+  Future<List<AnimePost>> getCachedLatest() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawJson = prefs.getString(_cachedLatestKey);
+      if (rawJson != null && rawJson.isNotEmpty) {
+        final Map<String, dynamic> data = json.decode(rawJson);
+        final List rawPosts = data['posts'] as List? ?? [];
+        return rawPosts.map((e) => AnimePost.fromJson(e as Map<String, dynamic>)).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
   /// Fetch Home page sections and featured anime
   Future<HomeData> getHome() async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConstants.anilabBaseUrl}/home'),
       headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cachedHomeKey, response.body);
       final Map<String, dynamic> data = json.decode(response.body);
       return HomeData.fromJson(data);
     } else {
@@ -24,11 +58,15 @@ class ApiService {
 
   /// Fetch Latest anime releases
   Future<List<AnimePost>> getLatest({int page = 1}) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConstants.anilabBaseUrl}/latest?page=$page'),
       headers: ApiConstants.headers,
     );
     if (response.statusCode == 200) {
+      if (page == 1) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_cachedLatestKey, response.body);
+      }
       final Map<String, dynamic> data = json.decode(response.body);
       final List rawPosts = data['posts'] as List? ?? [];
       return rawPosts.map((e) => AnimePost.fromJson(e as Map<String, dynamic>)).toList();
@@ -39,7 +77,7 @@ class ApiService {
 
   /// Fetch list of genres / categories
   Future<List<Category>> getCategories() async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConstants.anilabBaseUrl}/categories'),
       headers: ApiConstants.headers,
     );
@@ -56,7 +94,7 @@ class ApiService {
   Future<List<AnimePost>> searchAnime(String query, {int page = 1}) async {
     if (query.trim().isEmpty) return [];
     final encodedQuery = Uri.encodeComponent(query.trim());
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConstants.anilabBaseUrl}/search?query=$encodedQuery&page=$page'),
       headers: ApiConstants.headers,
     );
@@ -71,7 +109,7 @@ class ApiService {
 
   /// Fetch full metadata details for a specific anime
   Future<AnimeDetail> getAnimeDetail(int id) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConstants.anilabBaseUrl}/post?id=$id'),
       headers: ApiConstants.headers,
     );
@@ -85,7 +123,7 @@ class ApiService {
 
   /// Fetch episodes list for an anime ID
   Future<List<Episode>> getEpisodes(int animeId) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConstants.anidbBaseUrl}/anime/$animeId/episodes'),
       headers: ApiConstants.headers,
     );
@@ -100,7 +138,7 @@ class ApiService {
 
   /// Fetch streaming servers for a given episode ID
   Future<List<EpisodeServer>> getEpisodeServers(String episodeId) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConstants.anidbBaseUrl}/episode/$episodeId/servers'),
       headers: ApiConstants.headers,
     );
@@ -115,7 +153,7 @@ class ApiService {
 
   /// Get video iframe stream URL for a given server ID
   Future<String> getIframeUrl(String serverId) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('${ApiConstants.anidbBaseUrl}/episode/$serverId/iframe'),
       headers: ApiConstants.headers,
     );
@@ -134,7 +172,7 @@ class ApiService {
   /// Extract direct .m3u8 or .mp4 video stream URL from embed HTML
   Future<String?> extractDirectStreamUrl(String iframeUrl) async {
     try {
-      final response = await http.get(
+      final response = await _client.get(
         Uri.parse(iframeUrl),
         headers: ApiConstants.headers,
       );
