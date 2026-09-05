@@ -465,19 +465,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                     PopupMenuButton<double>(
                                       initialValue: _controller.playbackSpeed,
                                       tooltip: 'Playback Speed',
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8),
-                                        child: Text(
-                                          '${_controller.playbackSpeed}x',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
+                                      onSelected: _controller.setPlaybackSpeed,
+                                      icon: Text(
+                                        '${_controller.playbackSpeed}x',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
                                         ),
                                       ),
-                                      onSelected: _controller.setPlaybackSpeed,
                                       itemBuilder: (context) =>
                                           [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
                                               .map((s) => PopupMenuItem(

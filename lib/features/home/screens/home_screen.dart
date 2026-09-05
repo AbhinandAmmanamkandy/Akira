@@ -3,12 +3,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/anime_card.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
-import '../../../core/widgets/section_header.dart';
 import '../../../data/models/anime_post.dart';
 import '../../detail/screens/anime_detail_screen.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/continue_watching_carousel.dart';
-import '../widgets/featured_hero.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,12 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: AppColors.primaryColor,
                   onRefresh: () => _controller.loadHomeData(),
                   child: ListView(
-                    padding: const EdgeInsets.only(bottom: 32),
+                    padding: const EdgeInsets.only(top: 16, bottom: 32),
                     children: [
-                      if (homeData.featured != null) ...[
-                        FeaturedHero(featured: homeData.featured!),
-                        const SizedBox(height: 24),
-                      ],
                       if (_controller.watchHistory.isNotEmpty) ...[
                         ContinueWatchingCarousel(
                           items: _controller.watchHistory,
@@ -76,8 +70,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 24),
                       ],
                       if (postsToDisplay.isNotEmpty) ...[
-                        const SectionHeader(title: 'Recently Updated'),
-                        const SizedBox(height: 12),
                         _buildGridPostList(context, postsToDisplay),
                         const SizedBox(height: 24),
                       ],

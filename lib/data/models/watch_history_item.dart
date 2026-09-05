@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class WatchHistoryItem {
   final int animeId;
   final String animeTitle;

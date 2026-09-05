@@ -1,9 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../data/models/anime_post.dart';
+import '../../data/repositories/anime_title_cache.dart';
 import '../theme/app_colors.dart';
 
-class AnimeCard extends StatelessWidget {
+class AnimeCard extends StatefulWidget {
   final AnimePost post;
   final VoidCallback onTap;
   final double width;
@@ -18,12 +19,60 @@ class AnimeCard extends StatelessWidget {
   });
 
   @override
+  State<AnimeCard> createState() => _AnimeCardState();
+}
+
+class _AnimeCardState extends State<AnimeCard> {
+  String? _displayTitle;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveTitle();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimeCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id ||
+        oldWidget.post.title != widget.post.title) {
+      _resolveTitle();
+    }
+  }
+
+  Future<void> _resolveTitle() async {
+    final cached = AnimeTitleCache.get(widget.post.id);
+    if (cached != null) {
+      if (mounted) setState(() => _displayTitle = cached);
+      return;
+    }
+
+    if (widget.post.title != null &&
+        widget.post.title!.isNotEmpty &&
+        !widget.post.title!.startsWith('Anime #')) {
+      if (mounted) setState(() => _displayTitle = widget.post.title);
+      AnimeTitleCache.set(widget.post.id, widget.post.title!);
+      return;
+    }
+
+    final title =
+        await AnimeTitleCache.resolveTitle(widget.post.id, widget.post.title);
+    if (mounted) {
+      setState(() {
+        _displayTitle = title;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final titleText = _displayTitle ?? widget.post.title ?? 'Loading...';
+
     return SizedBox(
-      width: width,
-      height: height,
+      width: widget.width,
+      height: widget.height,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -33,9 +82,9 @@ class AnimeCard extends StatelessWidget {
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: post.poster != null
+                      child: widget.post.poster != null
                           ? CachedNetworkImage(
-                              imageUrl: post.poster!,
+                              imageUrl: widget.post.poster!,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Container(
                                 color: AppColors.surfaceColor,
@@ -58,7 +107,7 @@ class AnimeCard extends StatelessWidget {
                             )
                           : Container(color: AppColors.surfaceColor),
                     ),
-                    if (post.age != null)
+                    if (widget.post.age != null)
                       Positioned(
                         top: 6,
                         right: 6,
@@ -70,7 +119,7 @@ class AnimeCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            post.age!,
+                            widget.post.age!,
                             style: const TextStyle(
                               color: Colors.amber,
                               fontSize: 9,
@@ -83,19 +132,21 @@ class AnimeCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (post.title != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                post.title!,
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 34,
+              child: Text(
+                titleText,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
+                  height: 1.2,
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),

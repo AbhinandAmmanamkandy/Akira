@@ -1,5 +1,4 @@
 import 'anime_post.dart';
-import 'featured_anime.dart';
 
 class HomeSection {
   final String name;
@@ -20,20 +19,15 @@ class HomeSection {
 }
 
 class HomeData {
-  final FeaturedAnime? featured;
   final List<HomeSection> sections;
 
   const HomeData({
-    this.featured,
     required this.sections,
   });
 
   factory HomeData.fromJson(Map<String, dynamic> json) {
     var rawSections = json['sections'] as List? ?? [];
     return HomeData(
-      featured: json['featured'] != null
-          ? FeaturedAnime.fromJson(json['featured'] as Map<String, dynamic>)
-          : null,
       sections: rawSections
           .map((e) => HomeSection.fromJson(e as Map<String, dynamic>))
           .toList(),
