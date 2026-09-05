@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/anime_card.dart';
 import '../../../core/widgets/error_view.dart';
+import '../../../core/widgets/floating_search_bar.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../data/models/anime_post.dart';
 import '../../detail/screens/anime_detail_screen.dart';
@@ -35,49 +36,57 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) {
-            switch (_controller.state) {
-              case HomeState.loading:
-              case HomeState.initial:
-                return const LoadingView(message: 'Loading home content...');
-              case HomeState.error:
-                return ErrorView(
-                  title: 'Failed to load home content',
-                  message: _controller.errorMessage,
-                  onRetry: () => _controller.loadHomeData(),
-                );
-              case HomeState.success:
-                final homeData = _controller.homeData!;
-                final postsToDisplay = _controller.latestPosts.isNotEmpty
-                    ? _controller.latestPosts
-                    : (homeData.sections.isNotEmpty
-                        ? homeData.sections.first.posts
-                        : <AnimePost>[]);
+        child: Stack(
+          children: [
+            ListenableBuilder(
+              listenable: _controller,
+              builder: (context, _) {
+                switch (_controller.state) {
+                  case HomeState.loading:
+                  case HomeState.initial:
+                    return const LoadingView(message: 'Loading home content...');
+                  case HomeState.error:
+                    return ErrorView(
+                      title: 'Failed to load home content',
+                      message: _controller.errorMessage,
+                      onRetry: () => _controller.loadHomeData(),
+                    );
+                  case HomeState.success:
+                    final homeData = _controller.homeData!;
+                    final postsToDisplay = _controller.latestPosts.isNotEmpty
+                        ? _controller.latestPosts
+                        : (homeData.sections.isNotEmpty
+                            ? homeData.sections.first.posts
+                            : <AnimePost>[]);
 
-                return RefreshIndicator(
-                  color: AppColors.primaryColor,
-                  onRefresh: () => _controller.loadHomeData(),
-                  child: ListView(
-                    padding: const EdgeInsets.only(top: 16, bottom: 32),
-                    children: [
-                      if (_controller.watchHistory.isNotEmpty) ...[
-                        ContinueWatchingCarousel(
-                          items: _controller.watchHistory,
-                          onHistoryUpdated: () => _controller.refreshWatchHistory(),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      if (postsToDisplay.isNotEmpty) ...[
-                        _buildGridPostList(context, postsToDisplay),
-                        const SizedBox(height: 24),
-                      ],
-                    ],
-                  ),
-                );
-            }
-          },
+                    return RefreshIndicator(
+                      color: AppColors.primaryColor,
+                      onRefresh: () => _controller.loadHomeData(),
+                      child: ListView(
+                        padding: const EdgeInsets.only(top: 16, bottom: 90),
+                        children: [
+                          if (_controller.watchHistory.isNotEmpty) ...[
+                            ContinueWatchingCarousel(
+                              items: _controller.watchHistory,
+                              onHistoryUpdated: () =>
+                                  _controller.refreshWatchHistory(),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          if (postsToDisplay.isNotEmpty) ...[
+                            _buildGridPostList(context, postsToDisplay),
+                            const SizedBox(height: 24),
+                          ],
+                        ],
+                      ),
+                    );
+                }
+              },
+            ),
+
+            // Floating Bottom Search Bar
+            const FloatingSearchBar(),
+          ],
         ),
       ),
     );
