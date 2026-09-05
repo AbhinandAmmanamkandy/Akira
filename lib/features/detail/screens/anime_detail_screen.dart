@@ -234,6 +234,8 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                               width: double.infinity,
                               child: ElevatedButton.icon(
                                 onPressed: () {
+                                  final targetEpisode =
+                                      _controller.resumeEpisode ?? _controller.episodes.first;
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -241,11 +243,11 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                                         animeId: widget.animeId,
                                         animeTitle: title,
                                         animePoster: poster,
-                                        selectedEpisode: _controller.episodes.first,
+                                        selectedEpisode: targetEpisode,
                                         allEpisodes: _controller.episodes,
                                       ),
                                     ),
-                                  );
+                                  ).then((_) => _controller.loadData());
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primaryColor,
@@ -256,9 +258,11 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                                   ),
                                 ),
                                 icon: const Icon(Icons.play_circle_fill_rounded, size: 28),
-                                label: const Text(
-                                  'WATCH NOW',
-                                  style: TextStyle(
+                                label: Text(
+                                  _controller.lastWatchHistory != null
+                                      ? 'CONTINUE EPISODE ${_controller.resumeEpisode?.number ?? ''}'
+                                      : 'WATCH NOW',
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),

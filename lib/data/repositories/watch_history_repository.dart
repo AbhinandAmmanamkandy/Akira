@@ -12,6 +12,9 @@ class WatchHistoryRepository {
   Future<WatchHistoryItem?> getHistoryForEpisode(String episodeId) =>
       _service.getHistoryForEpisode(episodeId);
 
+  Future<WatchHistoryItem?> getHistoryForAnime(int animeId) =>
+      _service.getHistoryForAnime(animeId);
+
   Future<void> saveProgress(WatchHistoryItem item) => _service.saveWatchHistory(item);
 
   Future<void> removeProgress(String episodeId) => _service.removeItem(episodeId);
