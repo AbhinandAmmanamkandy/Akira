@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/badge_tag.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../player/screens/player_screen.dart';
 import '../controllers/anime_detail_controller.dart';
-import '../widgets/episode_list_item.dart';
 
 class AnimeDetailScreen extends StatefulWidget {
   final int animeId;
@@ -59,6 +59,18 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                 expandedHeight: 320,
                 pinned: true,
                 backgroundColor: AppColors.backgroundColor,
+                actions: [
+                  if (detail?.share != null)
+                    IconButton(
+                      icon: const Icon(Icons.share, color: Colors.white),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: detail!.share!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Share link copied to clipboard')),
+                        );
+                      },
+                    ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   titlePadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -144,10 +156,22 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                               BadgeTag(
                                 text: detail.age!,
                                 backgroundColor: AppColors.surfaceLightColor,
+                                icon: Icons.explicit_rounded,
                               ),
                             if (detail.status != null)
                               BadgeTag(
                                 text: detail.status!,
+                                backgroundColor: AppColors.surfaceLightColor,
+                              ),
+                            if (detail.premiered != null)
+                              BadgeTag(
+                                text: detail.premiered!,
+                                backgroundColor: AppColors.surfaceLightColor,
+                                icon: Icons.calendar_month_rounded,
+                              ),
+                            if (detail.rating != null)
+                              BadgeTag(
+                                text: detail.rating!,
                                 backgroundColor: AppColors.surfaceLightColor,
                               ),
                             if (detail.runtime != null)
@@ -194,33 +218,63 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                         ],
                       ],
 
-                      // Episodes Header
-                      SectionHeader(
-                        title: 'Episodes (${_controller.episodes.length})',
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (_controller.episodes.length > 5)
-                        TextField(
-                          controller: _episodeSearchController,
-                          style:
-                              const TextStyle(fontSize: 13, color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'Search episode number or title...',
-                            prefixIcon: const Icon(Icons.search,
-                                size: 18, color: AppColors.textSecondary),
-                            suffixIcon: _episodeSearchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear,
-                                        size: 18, color: AppColors.textSecondary),
-                                    onPressed: () {
-                                      _episodeSearchController.clear();
-                                      _controller.filterEpisodes('');
-                                    },
-                                  )
-                                : null,
+                      if (_controller.isLoadingEpisodes)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                            ),
                           ),
-                          onChanged: _controller.filterEpisodes,
+                        )
+                      else if (_controller.episodes.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PlayerScreen(
+                                      animeId: widget.animeId,
+                                      animeTitle: title,
+                                      animePoster: poster,
+                                      selectedEpisode: _controller.episodes.first,
+                                      allEpisodes: _controller.episodes,
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              icon: const Icon(Icons.play_circle_fill_rounded, size: 28),
+                              label: const Text(
+                                'WATCH NOW',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: Text(
+                              'No episodes available',
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          ),
                         ),
                       const SizedBox(height: 12),
                     ],
@@ -228,109 +282,19 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                 ),
               ),
 
-              // Episodes List
-              if (_controller.isLoadingEpisodes)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 30),
-                    child: LoadingView(message: 'Loading episodes...'),
-                  ),
-                )
-              else if (_controller.filteredEpisodes.isEmpty)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Center(
-                      child: Text(
-                        'No episodes available',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final ep = _controller.filteredEpisodes[index];
-                        return EpisodeListItem(
-                          episode: ep,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PlayerScreen(
-                                  animeId: widget.animeId,
-                                  animeTitle: title,
-                                  animePoster: poster,
-                                  selectedEpisode: ep,
-                                  allEpisodes: _controller.episodes,
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                      childCount: _controller.filteredEpisodes.length,
-                    ),
-                  ),
-                ),
+
+
+              // Seasons Section
+              if (detail != null && detail.seasons.isNotEmpty)
+                ..._buildHorizontalList('Seasons', detail.seasons),
+
+              // Related Anime Section
+              if (detail != null && detail.related.isNotEmpty)
+                ..._buildHorizontalList('Related Anime', detail.related),
 
               // Similar Anime Section
-              if (detail != null && detail.similar.isNotEmpty) ...[
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(0, 24, 0, 12),
-                    child: SectionHeader(title: 'Similar Anime'),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 180,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: detail.similar.length,
-                      itemBuilder: (context, index) {
-                        final post = detail.similar[index];
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AnimeDetailScreen(
-                                  animeId: post.id,
-                                  initialTitle: post.title,
-                                  initialPoster: post.poster,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            width: 110,
-                            margin: const EdgeInsets.only(right: 12),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: post.poster != null
-                                  ? CachedNetworkImage(
-                                      imageUrl: post.poster!,
-                                      fit: BoxFit.cover,
-                                      placeholder: (context, url) =>
-                                          Container(color: AppColors.surfaceColor),
-                                      errorWidget: (context, url, error) =>
-                                          Container(color: AppColors.surfaceColor),
-                                    )
-                                  : Container(color: AppColors.surfaceColor),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
+              if (detail != null && detail.similar.isNotEmpty)
+                ..._buildHorizontalList('Similar Anime', detail.similar),
 
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
@@ -338,5 +302,87 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
         );
       },
     );
+  }
+
+  List<Widget> _buildHorizontalList(String title, List<dynamic> items) {
+    if (items.isEmpty) return [];
+
+    return [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(0, 24, 0, 12),
+          child: SectionHeader(title: title),
+        ),
+      ),
+      SliverToBoxAdapter(
+        child: SizedBox(
+          height: 200,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final int itemId = item.id;
+              final String? itemTitle = item.title;
+              final String? itemPoster = item.poster;
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AnimeDetailScreen(
+                        animeId: itemId,
+                        initialTitle: itemTitle,
+                        initialPoster: itemPoster,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 110,
+                  margin: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: itemPoster != null
+                              ? CachedNetworkImage(
+                                  imageUrl: itemPoster,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  placeholder: (context, url) =>
+                                      Container(color: AppColors.surfaceColor),
+                                  errorWidget: (context, url, error) =>
+                                      Container(color: AppColors.surfaceColor),
+                                )
+                              : Container(color: AppColors.surfaceColor, width: double.infinity),
+                        ),
+                      ),
+                      if (itemTitle != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          itemTitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    ];
   }
 }

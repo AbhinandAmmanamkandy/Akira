@@ -16,18 +16,18 @@ class SectionHeader extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 4,
-            height: 18,
+            width: 3.5,
+            height: 16,
             decoration: BoxDecoration(
               color: AppColors.primaryColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),

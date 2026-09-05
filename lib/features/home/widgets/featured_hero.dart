@@ -27,13 +27,16 @@ class FeaturedHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final heroHeight = screenHeight * 0.60;
+
     return GestureDetector(
       onTap: () => _navigateToDetail(context),
       child: Stack(
         children: [
-          // Background Poster with Gradient (Full Width edge-to-edge)
+          // Background Poster with Gradient (Full Width edge-to-edge, 60% screen height)
           SizedBox(
-            height: 420,
+            height: heroHeight,
             width: double.infinity,
             child: featured.poster != null
                 ? CachedNetworkImage(
@@ -70,20 +73,6 @@ class FeaturedHero extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Badges Row (Type, Age, Premiered)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    if (featured.type != null)
-                      _buildBadge(featured.type!.toUpperCase(), AppColors.primaryColor),
-                    if (featured.age != null)
-                      _buildBadge(featured.age!, AppColors.accentColor),
-                    if (featured.premiered != null)
-                      _buildBadge(featured.premiered!, AppColors.surfaceLightColor, textColor: AppColors.textSecondary),
-                  ],
-                ),
-                const SizedBox(height: 12),
                 // Title
                 Text(
                   featured.title ?? 'Featured Anime',
@@ -97,60 +86,69 @@ class FeaturedHero extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
-                // Stats Row (Score, Status, Runtime)
-                Row(
-                  children: [
-                    if (featured.score != null || featured.rating != null) ...[
-                      const Icon(Icons.star_rounded, color: AppColors.starRatingColor, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        featured.score ?? featured.rating ?? '',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                    ],
-                    if (featured.status != null) ...[
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: AppColors.accentColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        featured.status!,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(width: 14),
-                    ],
-                    if (featured.runtime != null)
-                      Text(
-                        featured.runtime!,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                      ),
-                  ],
-                ),
-                // Genres
+                // Genres / Categories Chips right below anime name
                 if (featured.genres != null) ...[
                   const SizedBox(height: 8),
-                  Text(
-                    featured.genres!,
-                    style: const TextStyle(
-                      color: AppColors.accentColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: featured.genres!
+                        .split(',')
+                        .map((genre) => genre.trim())
+                        .where((genre) => genre.isNotEmpty)
+                        .map((genre) => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceColor.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: AppColors.primaryColor.withValues(alpha: 0.4),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                genre,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ))
+                        .toList(),
                   ),
                 ],
+                const SizedBox(height: 10),
+                // Row 1: Score (8.7), Age (PG-13), Type (TV) with professional vibrant colors
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (featured.score != null || featured.rating != null)
+                      _buildInlineMeta(Icons.star_rounded, featured.score ?? featured.rating ?? '', iconColor: const Color(0xFFF59E0B), isHighlight: true), // Amber Gold
+                    if (featured.age != null)
+                      _buildInlineMeta(Icons.explicit_rounded, featured.age!, iconColor: const Color(0xFFF97316)), // Warm Orange
+                    if (featured.type != null)
+                      _buildInlineMeta(Icons.ondemand_video_rounded, featured.type!.toUpperCase(), iconColor: const Color(0xFF0EA5E9)), // Vibrant Sky Blue
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Row 2: Runtime (24m), Status (Currently Airing), Premiered (Fall 1999) with professional vibrant colors
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (featured.runtime != null)
+                      _buildInlineMeta(Icons.schedule_rounded, featured.runtime!, iconColor: const Color(0xFFA855F7)), // Soft Monarch Purple
+                    if (featured.status != null)
+                      _buildInlineMeta(Icons.live_tv_rounded, featured.status!, iconColor: const Color(0xFF10B981)), // Emerald Mint Green
+                    if (featured.premiered != null)
+                      _buildInlineMeta(Icons.event_rounded, featured.premiered!, iconColor: const Color(0xFF818CF8)), // Teal Aqua
+                  ],
+                ),
                 const SizedBox(height: 16),
                 // Watch Now Button
                 SizedBox(
@@ -186,22 +184,21 @@ class FeaturedHero extends StatelessWidget {
     );
   }
 
-  Widget _buildBadge(String text, Color bgColor, {Color textColor = Colors.white}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.bold,
-          fontSize: 10,
-          letterSpacing: 0.5,
+  Widget _buildInlineMeta(IconData icon, String text, {Color iconColor = AppColors.primaryColor, bool isHighlight = false}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: iconColor, size: 16),
+        const SizedBox(width: 5),
+        Text(
+          text,
+          style: TextStyle(
+            color: isHighlight ? Colors.white : AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.w500,
+          ),
         ),
-      ),
+      ],
     );
   }
 }
