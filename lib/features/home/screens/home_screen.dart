@@ -37,88 +37,53 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                AppConstants.appName,
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  letterSpacing: 1.5,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              AppConstants.appSubtitle,
-              style: TextStyle(
-                fontWeight: FontWeight.w300,
-                fontSize: 18,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _controller.loadHomeData(),
-          ),
-        ],
-      ),
-      body: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) {
-          switch (_controller.state) {
-            case HomeState.loading:
-            case HomeState.initial:
-              return const LoadingView(message: 'Loading home content...');
-            case HomeState.error:
-              return ErrorView(
-                title: 'Failed to load home content',
-                message: _controller.errorMessage,
-                onRetry: () => _controller.loadHomeData(),
-              );
-            case HomeState.success:
-              final homeData = _controller.homeData!;
-              return RefreshIndicator(
-                color: AppColors.primaryColor,
-                onRefresh: () => _controller.loadHomeData(),
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: 32),
-                  children: [
-                    if (homeData.featured != null) ...[
-                      FeaturedHero(featured: homeData.featured!),
-                      const SizedBox(height: 24),
-                    ],
-                    if (_controller.watchHistory.isNotEmpty) ...[
-                      ContinueWatchingCarousel(
-                        items: _controller.watchHistory,
-                        onHistoryUpdated: () => _controller.refreshWatchHistory(),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                    for (var section in homeData.sections) ...[
-                      if (section.posts.isNotEmpty) ...[
-                        SectionHeader(title: section.name),
-                        const SizedBox(height: 12),
-                        _buildHorizontalPostList(context, section.posts),
+      body: SafeArea(
+        child: ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) {
+            switch (_controller.state) {
+              case HomeState.loading:
+              case HomeState.initial:
+                return const LoadingView(message: 'Loading home content...');
+              case HomeState.error:
+                return ErrorView(
+                  title: 'Failed to load home content',
+                  message: _controller.errorMessage,
+                  onRetry: () => _controller.loadHomeData(),
+                );
+              case HomeState.success:
+                final homeData = _controller.homeData!;
+                return RefreshIndicator(
+                  color: AppColors.primaryColor,
+                  onRefresh: () => _controller.loadHomeData(),
+                  child: ListView(
+                    padding: const EdgeInsets.only(bottom: 32),
+                    children: [
+                      if (homeData.featured != null) ...[
+                        FeaturedHero(featured: homeData.featured!),
                         const SizedBox(height: 24),
                       ],
+                      if (_controller.watchHistory.isNotEmpty) ...[
+                        ContinueWatchingCarousel(
+                          items: _controller.watchHistory,
+                          onHistoryUpdated: () => _controller.refreshWatchHistory(),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      for (var section in homeData.sections) ...[
+                        if (section.posts.isNotEmpty) ...[
+                          SectionHeader(title: section.name),
+                          const SizedBox(height: 12),
+                          _buildHorizontalPostList(context, section.posts),
+                          const SizedBox(height: 24),
+                        ],
+                      ],
                     ],
-                  ],
-                ),
-              );
-          }
-        },
+                  ),
+                );
+            }
+          },
+        ),
       ),
     );
   }
