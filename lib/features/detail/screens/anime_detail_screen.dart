@@ -126,8 +126,9 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (_controller.isLoadingDetail) ...[
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 50),
                         const LoadingView(),
+                        const SizedBox(height: 50),
                       ] else if (_controller.errorMessage != null &&
                           detail == null) ...[
                         const SizedBox(height: 20),
@@ -216,66 +217,67 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
+                        
+                        if (_controller.isLoadingEpisodes)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
+                              ),
+                            ),
+                          )
+                        else if (_controller.episodes.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16.0),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PlayerScreen(
+                                        animeId: widget.animeId,
+                                        animeTitle: title,
+                                        animePoster: poster,
+                                        selectedEpisode: _controller.episodes.first,
+                                        allEpisodes: _controller.episodes,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.play_circle_fill_rounded, size: 28),
+                                label: const Text(
+                                  'WATCH NOW',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Center(
+                              child: Text(
+                                'No episodes available',
+                                style: TextStyle(color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ),
                       ],
 
-                      if (_controller.isLoadingEpisodes)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
-                            ),
-                          ),
-                        )
-                      else if (_controller.episodes.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => PlayerScreen(
-                                      animeId: widget.animeId,
-                                      animeTitle: title,
-                                      animePoster: poster,
-                                      selectedEpisode: _controller.episodes.first,
-                                      allEpisodes: _controller.episodes,
-                                    ),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              icon: const Icon(Icons.play_circle_fill_rounded, size: 28),
-                              label: const Text(
-                                'WATCH NOW',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Center(
-                            child: Text(
-                              'No episodes available',
-                              style: TextStyle(color: AppColors.textSecondary),
-                            ),
-                          ),
-                        ),
                       const SizedBox(height: 12),
                     ],
                   ),

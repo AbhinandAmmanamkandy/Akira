@@ -27,10 +27,19 @@ class PlayerScreen extends StatefulWidget {
 
 class _PlayerScreenState extends State<PlayerScreen> {
   late final PlayerController _controller;
+  
+  static const int _chunkSize = 100;
+  List<List<Episode>> _chunks = [];
+  int _selectedChunkIndex = 0;
+  String _lastEpisodeId = '';
 
   @override
   void initState() {
     super.initState();
+    _calculateChunks();
+    _lastEpisodeId = widget.selectedEpisode.id;
+    _updateSelectedChunk(_lastEpisodeId);
+
     _controller = PlayerController(
       animeId: widget.animeId,
       animeTitle: widget.animeTitle,
@@ -39,6 +48,30 @@ class _PlayerScreenState extends State<PlayerScreen> {
       allEpisodes: widget.allEpisodes,
     );
     _controller.init();
+  }
+
+  void _calculateChunks() {
+    _chunks = [];
+    if (widget.allEpisodes.isEmpty) return;
+    for (var i = 0; i < widget.allEpisodes.length; i += _chunkSize) {
+      _chunks.add(
+        widget.allEpisodes.sublist(
+          i,
+          i + _chunkSize > widget.allEpisodes.length
+              ? widget.allEpisodes.length
+              : i + _chunkSize,
+        ),
+      );
+    }
+  }
+
+  void _updateSelectedChunk(String epId) {
+    for (int i = 0; i < _chunks.length; i++) {
+      if (_chunks[i].any((ep) => ep.id == epId)) {
+        _selectedChunkIndex = i;
+        break;
+      }
+    }
   }
 
   @override
@@ -62,6 +95,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
+        if (_lastEpisodeId != _controller.currentEpisode.id) {
+          _lastEpisodeId = _controller.currentEpisode.id;
+          // Only auto-switch chunk if the new episode is not in the current chunk
+          if (!_chunks[_selectedChunkIndex].any((ep) => ep.id == _lastEpisodeId)) {
+            _updateSelectedChunk(_lastEpisodeId);
+          }
+        }
+
         final currentIndex = widget.allEpisodes
             .indexWhere((e) => e.id == _controller.currentEpisode.id);
         final hasPrev = currentIndex > 0;
@@ -209,75 +250,117 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     const SizedBox(height: 16),
                     const Divider(color: AppColors.surfaceLightColor),
                     const SizedBox(height: 16),
-                    const Text(
-                      'All Episodes',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Episodes',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (_chunks.length > 1)
+                          Container(
+                            height: 32,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceLightColor,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: DropdownButton<int>(
+                              value: _selectedChunkIndex,
+                              dropdownColor: AppColors.surfaceColor,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold),
+                              icon: const Icon(Icons.arrow_drop_down,
+                                  color: AppColors.primaryColor),
+                              underline: const SizedBox(),
+                              items: List.generate(_chunks.length, (i) {
+                                final start = (i * _chunkSize) + 1;
+                                final end = (i * _chunkSize) + _chunks[i].length;
+                                return DropdownMenuItem(
+                                  value: i,
+                                  child: Text('Eps $start - $end'),
+                                );
+                              }),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    _selectedChunkIndex = val;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      height: 100,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: widget.allEpisodes.length,
-                        itemBuilder: (context, index) {
-                          final ep = widget.allEpisodes[index];
-                          final isCurrent =
-                              ep.id == _controller.currentEpisode.id;
-                          return Container(
-                            width: 90,
-                            margin: const EdgeInsets.only(right: 10),
-                            child: InkWell(
-                              onTap: () => _controller.selectEpisode(ep),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isCurrent
-                                      ? AppColors.primaryColor
-                                      : AppColors.surfaceColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: isCurrent
-                                      ? Border.all(
-                                          color: Colors.white, width: 2)
-                                      : null,
-                                ),
-                                padding: const EdgeInsets.all(8),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'EP ${ep.number}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: isCurrent
-                                            ? Colors.white
-                                            : AppColors.textPrimary,
+                    if (_chunks.isNotEmpty)
+                      SizedBox(
+                        height: 100,
+                        child: ListView.builder(
+                          key: ValueKey<int>(_selectedChunkIndex), // Reset scroll position when chunk changes
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _chunks[_selectedChunkIndex].length,
+                          itemBuilder: (context, index) {
+                            final ep = _chunks[_selectedChunkIndex][index];
+                            final isCurrent =
+                                ep.id == _controller.currentEpisode.id;
+                            return Container(
+                              width: 90,
+                              margin: const EdgeInsets.only(right: 10),
+                              child: InkWell(
+                                onTap: () => _controller.selectEpisode(ep),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: isCurrent
+                                        ? AppColors.primaryColor
+                                        : AppColors.surfaceColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: isCurrent
+                                        ? Border.all(
+                                            color: Colors.white, width: 2)
+                                        : null,
+                                  ),
+                                  padding: const EdgeInsets.all(8),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'EP ${ep.number}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: isCurrent
+                                              ? Colors.white
+                                              : AppColors.textPrimary,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      ep.name,
-                                      maxLines: 2,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: isCurrent
-                                            ? Colors.white70
-                                            : AppColors.textSecondary,
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        ep.name,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isCurrent
+                                              ? Colors.white70
+                                              : AppColors.textSecondary,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
